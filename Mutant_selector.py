@@ -1,13 +1,17 @@
+import os
 import csv
 from Bio.PDB import PDBParser, NeighborSearch, Selection
+from Bio.PDB.DSSP import DSSP
 import numpy as np
+from Bio.PDB import MMCIFParser
+import sys
 
-### 1️⃣ Flexible Residue Detection via B-Factors
+
+# 1. Flexible Residue Detection via B-Factors
 def get_flexible_residues(pdb_path, bfactor_threshold=30):
     parser = PDBParser(QUIET=True)
     struct = parser.get_structure("structure", pdb_path)
     results = []
-
     for model in struct:
         for chain in model:
             for residue in chain:
@@ -16,10 +20,14 @@ def get_flexible_residues(pdb_path, bfactor_threshold=30):
                 b_vals = [atom.get_bfactor() for atom in residue]
                 avg_b = np.mean(b_vals)
                 if avg_b > bfactor_threshold:
-                    results.append((chain.id, residue.id[1], residue.resname, round(avg_b, 2)))
+                    results.append((chain.id,
+                                    residue.id[1],
+                                    residue.resname,
+                                    round(avg_b, 2)))
     return results
 
-# DNA-Contact Residue Detection (User-Defined Chains)
+
+# 2.DNA-Contact Residue Detection
 def get_dna_contact_residues(pdb_path, dna_chain_ids, contact_radius=5.0):
     parser = PDBParser(QUIET=True)
     struct = parser.get_structure("complex", pdb_path)
@@ -39,12 +47,13 @@ def get_dna_contact_residues(pdb_path, dna_chain_ids, contact_radius=5.0):
             chain_id = residue.get_parent().id
             if chain_id in dna_chain_ids:
                 continue
-            resnum  = residue.id[1]
+            resnum = residue.id[1]
             resname = residue.resname
             contacts.add((chain_id, resnum, resname))
     return list(contacts)
 
-# Nucleotide-Proximal Residue Detection (User-Defined Ligands)
+
+# 3. Nucleotide-Proximal Residue Detection
 def get_nucleotide_proximal_residues(pdb_path, ligand_names, radius=6.0):
     parser = PDBParser(QUIET=True)
     struct = parser.get_structure("structure", pdb_path)
@@ -67,17 +76,17 @@ def get_nucleotide_proximal_residues(pdb_path, ligand_names, radius=6.0):
             if parent.id[0] != ' ':
                 continue
             chain_id = parent.get_parent().id
-            resnum   = parent.id[1]
-            resname  = parent.resname
+            resnum = parent.id[1]
+            resname = parent.resname
             proximals.add((chain_id, resnum, resname))
     return list(proximals)
 
-# Manual ATP-Site Residue Selection
+
+# 4. Manual ATP-Site Residue Selection
 def get_manual_site_residues(pdb_path, chain_id, residue_numbers):
     parser = PDBParser(QUIET=True)
     struct = parser.get_structure("structure", pdb_path)
     manual = []
-
     for model in struct:
         for chain in model:
             if chain.id != chain_id:
@@ -90,54 +99,114 @@ def get_manual_site_residues(pdb_path, chain_id, residue_numbers):
                     print(f"Warning: residue {num} not found in chain {chain.id}")
     return manual
 
-### Helper: write list of tuples to CSV
-def write_list_to_csv(filename, data, headers):
-    with open(filename, 'w', newline='') as fh:
+
+# 5. Filter for surface‐exposed instability hotspots
+def get_instability_residues(cif_path: str,
+                             chain_id: str):
+    print("Please select surface exposed residues in .cif file and save them as ...exposed.cif (I did not manage to perform this on pdb - insrtructions are in README. . In the future the entire scriptt will be using only cif.")
+
+    instability_map = {
+        "ASN": ("Deamidation hotspot", "Mutate to D or A"),
+        "GLN": ("Deamidation hotspot", "Mutate to E or A"),
+        "MET": ("Oxidation-prone",      "Mutate to L or I"),
+        "CYS": ("Free thiol",           "Mutate to S or A"),
+        "PHE": ("Hydrophobic patch",    "Mutate to S or Y"),
+        "TRP": ("Hydrophobic patch",    "Mutate to F or Y"),
+        "TYR": ("Hydrophobic patch",    "Mutate to S or F"),
+        "LEU": ("Hydrophobic patch",    "Mutate to T or S"),
+        "ILE": ("Hydrophobic patch",    "Mutate to T or S"),
+        "LYS": ("Protease site",        "Mutate to R")
+    }
+
+    # 1. Parse CIF and extract model[0]
+    parser    = MMCIFParser(QUIET=True)
+    structure = parser.get_structure("exposed", cif_path)
+    model     = structure[0]
+
+    inst_residues = []
+    suggestions   = []
+
+    # 2. Loop only over residues in the chosen chain
+    if chain_id not in model:
+        sys.exit(f"ERROR: Chain {chain_id} not found in {cif_path}")
+
+    for res in model[chain_id]:
+        # skip hetero-residues, keep only standard amino acids
+        if res.id[0] != " ":
+            continue
+
+        resname = res.resname
+        if resname not in instability_map:
+            continue
+
+        inst_type, suggestion = instability_map[resname]
+        chain, resnum = chain_id, res.id[1]
+
+        inst_residues.append(
+            (chain, resnum, resname, inst_type)
+        )
+        suggestions.append(
+            (chain, resnum, resname, suggestion)
+        )
+
+    return inst_residues, suggestions
+
+
+### Helpers: write to CSV / TXT
+def write_list_to_csv(filepath, data, headers):
+    with open(filepath, 'w', newline='') as fh:
         writer = csv.writer(fh)
         writer.writerow(headers)
-        for row in data:
-            writer.writerow(row)
-    print(f"→ Wrote {len(data)} records to {filename}")
+        writer.writerows(data)
+    print(f"→ Wrote {len(data)} records to {filepath}")
 
-### ─────────────────────────────────────────────────────────────────────
+def write_suggestions_to_txt(filepath, suggestions):
+    with open(filepath, 'w') as fh:
+        for chain, resnum, resname, suggestion in suggestions:
+            fh.write(f"{chain} {resnum} {resname}: {suggestion}\n")
+    print(f"→ Wrote {len(suggestions)} suggestions to {filepath}")
+
+# EXECUTION FLOW
 if __name__ == "__main__":
-    pdb_file = input("🔍 Enter path to your PDB file: ").strip()
+    pdb_file = input("🔍 PDB file path: ").strip()
+    results_dir = input("📂 Results folder path: ").strip()
+    os.makedirs(results_dir, exist_ok=True)
 
     # 1. Flexible residues
     bcut = float(input("📈 B-factor threshold (e.g., 30): ").strip())
     flex = get_flexible_residues(pdb_file, bcut)
-    print(f"\n🧬 Flexible residues found: {len(flex)}")
-    write_list_to_csv("flexible_residues.csv", flex,
-                      ["chain", "resnum", "resname", "avg_bfactor"])
+    out1 = os.path.join(results_dir, "flexible_residues.csv")
+    write_list_to_csv(out1, flex, ["chain", "resnum", "resname", "avg_bfactor"])
 
     # 2. DNA-contact residues
-    dna_input = input("\n🧬 DNA chain IDs (comma-sep, e.g., D,E): ").strip()
+    dna_input = input("🧬 DNA chain IDs (comma-sep): ").strip()
     dna_chains = [c.strip() for c in dna_input.split(',') if c.strip()]
-    dna_contacts = get_dna_contact_residues(pdb_file, dna_chains)
-    print(f"🧲 DNA-contact residues found: {len(dna_contacts)}")
-    write_list_to_csv("dna_contact_residues.csv", dna_contacts,
-                      ["chain", "resnum", "resname"])
+    dnac = get_dna_contact_residues(pdb_file, dna_chains)
+    out2 = os.path.join(results_dir, "dna_contact_residues.csv")
+    write_list_to_csv(out2, dnac, ["chain", "resnum", "resname"])
 
     # 3. Nucleotide-proximal residues
-    lig_input = input("\n🧪 Nucleotide ligands (comma-sep, e.g., ATP,ADP,ANP): Press enter if none ").strip()
+    lig_input = input("🧪 Ligands (comma-sep, e.g., ATP,ADP,ANP) or press enter: ").strip()
     ligs = [l.strip().upper() for l in lig_input.split(',') if l.strip()]
     prox = get_nucleotide_proximal_residues(pdb_file, ligs)
-    print(f"⚡ Nucleotide-proximal residues found: {len(prox)}")
-    write_list_to_csv("nucleotide_proximal_residues.csv", prox,
-                      ["chain", "resnum", "resname"])
+    out3 = os.path.join(results_dir, "nucleotide_proximal_residues.csv")
+    write_list_to_csv(out3, prox, ["chain", "resnum", "resname"])
 
-    # 4. Manual site selection
-    manual_q = input("\n✏️ Manually select residues around ATP site? (y/n): ").strip().lower()
-    if manual_q == 'y':
-        chain_id = input("🔢 Enter chain ID for manual selection (e.g., A): ").strip()
-        nums_input = input("📋 Enter residue numbers based on UNIPROT, make sure numbering is the same (comma-sep, e.g., 1,2,5,8): ").strip()
-        nums = []
-        for x in nums_input.split(','):
-            try:
-                nums.append(int(x.strip()))
-            except ValueError:
-                print(f"Warning: '{x}' is not a valid integer—skipped.")
-        manual = get_manual_site_residues(pdb_file, chain_id, nums)
-        print(f"✂️ Manually selected residues: {len(manual)}")
-        write_list_to_csv("manual_site_residues.csv", manual,
-                          ["chain", "resnum", "resname"])
+    # 4. Manual ATP-site residues
+    if input("✏️ Manual site selection? (y/n): ").strip().lower() == 'y':
+        cid = input("Chain ID for manual selection: ").strip()
+        nums_input = input("Please use UniProt or similar for residue numbers (comma-sep): ").strip()
+        nums = [int(x) for x in nums_input.split(',') if x.strip().isdigit()]
+        manual = get_manual_site_residues(pdb_file, cid, nums)
+        out4 = os.path.join(results_dir, "manual_site_residues.csv")
+        write_list_to_csv(out4, manual, ["chain", "resnum", "resname"])
+
+    # 5. Instability hotspots
+    if input("✏️ Would you like to generate stability hotspots? (y/n): ").strip().lower() == 'y':
+        cif_path = input("Path to .exposed.cif file: ").strip()
+        chain_id = input("Chain to analyze (e.g. A): ").strip()
+        inst_list, suggestion_list = get_instability_residues(cif_path, chain_id)
+        out5_csv = os.path.join(results_dir, "instability_residues.csv")
+        out5_txt = os.path.join(results_dir, "instability_suggestions.txt")
+        write_list_to_csv(out5_csv,inst_list,headers=["Chain","ResNum","ResName","Instability"])
+        write_suggestions_to_txt(out5_txt,suggestion_list)
