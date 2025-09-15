@@ -168,22 +168,26 @@ def write_suggestions_to_txt(filepath, suggestions):
 
 # EXECUTION FLOW
 if __name__ == "__main__":
-    pdb_file = input("🔍 PDB file path: ").strip()
-    results_dir = input("📂 Results folder path: ").strip()
+    #pdb_file = input("🔍 PDB file path: ").strip()
+    pdb_file=r"C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\pdb\2P6R.pdb"
+    #results_dir = input("📂 Results folder path: ").strip()
+    results_dir=r"C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\results"
     os.makedirs(results_dir, exist_ok=True)
 
     # 1. Flexible residues
-    bcut = float(input("📈 B-factor threshold (e.g., 30): ").strip())
-    flex = get_flexible_residues(pdb_file, bcut)
-    out1 = os.path.join(results_dir, "flexible_residues.csv")
-    write_list_to_csv(out1, flex, ["chain", "resnum", "resname", "avg_bfactor"])
+    if input("✏️ Would you like to generate flexibility hotspots? (y/n): ").strip().lower() == 'y':
+        bcut = float(input("📈 B-factor threshold (e.g., 30): ").strip())
+        flex = get_flexible_residues(pdb_file, bcut)
+        out1 = os.path.join(results_dir, "flexible_residues.csv")
+        write_list_to_csv(out1, flex, ["chain", "resnum", "resname", "avg_bfactor"])
 
     # 2. DNA-contact residues
-    dna_input = input("🧬 DNA chain IDs (comma-sep): ").strip()
-    dna_chains = [c.strip() for c in dna_input.split(',') if c.strip()]
-    dnac = get_dna_contact_residues(pdb_file, dna_chains)
-    out2 = os.path.join(results_dir, "dna_contact_residues.csv")
-    write_list_to_csv(out2, dnac, ["chain", "resnum", "resname"])
+    if input("✏️ Would you like to generate DNA contact residues? (y/n): ").strip().lower() == 'y':
+        dna_input = input("🧬 DNA chain IDs (comma-sep): ").strip()
+        dna_chains = [c.strip() for c in dna_input.split(',') if c.strip()]
+        dnac = get_dna_contact_residues(pdb_file, dna_chains)
+        out2 = os.path.join(results_dir, "dna_contact_residues.csv")
+        write_list_to_csv(out2, dnac, ["chain", "resnum", "resname"])
 
     # 3. Nucleotide-proximal residues
     lig_input = input("🧪 Ligands (comma-sep, e.g., ATP,ADP,ANP) or press enter: ").strip()
