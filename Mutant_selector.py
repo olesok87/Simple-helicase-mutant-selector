@@ -1,11 +1,47 @@
 import os
 import csv
+from Bio import PDB
 from Bio.PDB import PDBParser, NeighborSearch, Selection
-from Bio.PDB.DSSP import DSSP
 import numpy as np
-from Bio.PDB import MMCIFParser
 import sys
 
+
+# 0. Prep pdf file (can be skipped)
+def clean_and_renumber_pdb(input_pdb, output_all_chains, output_single_chain, target_chain=None):
+    parser = PDB.PDBParser(QUIET=True)
+    structure = parser.get_structure("protein", input_pdb)
+
+    io = PDB.PDBIO()
+
+    class SelectAllChains(PDB.Select):
+        def accept_residue(self, residue):
+            return residue.id[0] == " "  # Exclude heteroatoms and waters
+        def accept_atom(self, atom):
+            return atom.element != "H"  # Remove hydrogens
+
+    class SelectSingleChain(PDB.Select):
+        def accept_chain(self, chain):
+            return chain.id == target_chain
+        def accept_residue(self, residue):
+            return residue.id[0] == " "
+        def accept_atom(self, atom):
+            return atom.element != "H"
+
+    # Renumber all residues starting from 1 per chain
+    for model in structure:
+        for chain in model:
+            for i, residue in enumerate(chain.get_residues(), start=1):
+                residue.id = (" ", i, " ")
+
+    # Save all chains
+    io.set_structure(structure)
+    io.save(output_all_chains, select=SelectAllChains())
+    print(f"✅ Saved cleaned PDB with all chains to: {output_all_chains}")
+
+    # Save only the specified chain
+    io.set_structure(structure)
+    io.save(output_single_chain, select=SelectSingleChain())
+    print(f"✅ Saved cleaned PDB with chain {target_chain} to: {output_single_chain}")
 
 # 1. Flexible Residue Detection via B-Factors
 def get_flexible_residues(pdb_path, bfactor_threshold=30):
@@ -100,11 +136,10 @@ def get_manual_site_residues(pdb_path, chain_id, residue_numbers):
     return manual
 
 
-# 5. Filter for surface‐exposed instability hotspots
-def get_instability_residues(cif_path: str,
-                             chain_id: str):
-    print("Please select surface exposed residues in .cif file and save them as ...exposed.cif (I did not manage to perform this on pdb - insrtructions are in README. . In the future the entire scriptt will be using only cif.")
+#from Bio import PDB
+import sys
 
+def get_instability_residues(pdb_path: str, chain_id: str):
     instability_map = {
         "ASN": ("Deamidation hotspot", "Mutate to D or A"),
         "GLN": ("Deamidation hotspot", "Mutate to E or A"),
@@ -118,39 +153,30 @@ def get_instability_residues(cif_path: str,
         "LYS": ("Protease site",        "Mutate to R")
     }
 
-    # 1. Parse CIF and extract model[0]
-    parser    = MMCIFParser(QUIET=True)
-    structure = parser.get_structure("exposed", cif_path)
-    model     = structure[0]
+    parser = PDB.PDBParser(QUIET=True)
+    structure = parser.get_structure("protein", pdb_path)
+    model = structure[0]
 
     inst_residues = []
-    suggestions   = []
 
-    # 2. Loop only over residues in the chosen chain
-    if chain_id not in model:
-        sys.exit(f"ERROR: Chain {chain_id} not found in {cif_path}")
+    # Check if chain exists
+    if chain_id not in [chain.id for chain in model]:
+        sys.exit(f"ERROR: Chain {chain_id} not found in {pdb_path}")
 
     for res in model[chain_id]:
-        # skip hetero-residues, keep only standard amino acids
-        if res.id[0] != " ":
+        if res.id[0] != " ":  # Skip heteroatoms and waters
             continue
 
-        resname = res.resname
+        resname = res.get_resname()
         if resname not in instability_map:
             continue
 
         inst_type, suggestion = instability_map[resname]
-        chain, resnum = chain_id, res.id[1]
+        resnum = res.id[1]
 
-        inst_residues.append(
-            (chain, resnum, resname, inst_type)
-        )
-        suggestions.append(
-            (chain, resnum, resname, suggestion)
-        )
+        inst_residues.append((chain_id, resnum, resname, inst_type, suggestion))
 
-    return inst_residues, suggestions
-
+    return inst_residues
 
 ### Helpers: write to CSV / TXT
 def write_list_to_csv(filepath, data, headers):
@@ -160,19 +186,23 @@ def write_list_to_csv(filepath, data, headers):
         writer.writerows(data)
     print(f"→ Wrote {len(data)} records to {filepath}")
 
-def write_suggestions_to_txt(filepath, suggestions):
-    with open(filepath, 'w') as fh:
-        for chain, resnum, resname, suggestion in suggestions:
-            fh.write(f"{chain} {resnum} {resname}: {suggestion}\n")
-    print(f"→ Wrote {len(suggestions)} suggestions to {filepath}")
 
 # EXECUTION FLOW
 if __name__ == "__main__":
-    #pdb_file = input("🔍 PDB file path: ").strip()
-    pdb_file=r"C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\pdb\2P6R.pdb"
+    # pdb_file = input("🔍 PDB file path: ").strip()
+    # fix
+    input_pdb = r"C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\pdb\6YYE.pdb"
+    pdb_file = r"C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\pdb\6YYE.pdb"
     #results_dir = input("📂 Results folder path: ").strip()
     results_dir=r"C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\results"
     os.makedirs(results_dir, exist_ok=True)
+
+    # 0. Prep pdf file
+    output_all_chains_path = r"C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\pdb\cleaned\cleaned_all.pdb"
+    output_single_chain_path = r"C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\pdb\cleaned\single_chain.pdb"
+    chain_to_keep = input("Which chain would you like to analyse later in Rosetta?")  # Set to your desired chain
+    clean_and_renumber_pdb(input_pdb, output_all_chains_path, output_single_chain_path, chain_to_keep)
+
 
     # 1. Flexible residues
     if input("✏️ Would you like to generate flexibility hotspots? (y/n): ").strip().lower() == 'y':
@@ -207,10 +237,16 @@ if __name__ == "__main__":
 
     # 5. Instability hotspots
     if input("✏️ Would you like to generate stability hotspots? (y/n): ").strip().lower() == 'y':
-        cif_path = input("Path to .exposed.cif file: ").strip()
+        #cif_path = input("Path to .exposed.pdf file: ").strip()
+        cif_path = r'C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\pdb\6YYE_exposed_surface.pdb'
         chain_id = input("Chain to analyze (e.g. A): ").strip()
-        inst_list, suggestion_list = get_instability_residues(cif_path, chain_id)
+        inst_list = get_instability_residues(cif_path, chain_id)
         out5_csv = os.path.join(results_dir, "instability_residues.csv")
-        out5_txt = os.path.join(results_dir, "instability_suggestions.txt")
-        write_list_to_csv(out5_csv,inst_list,headers=["Chain","ResNum","ResName","Instability"])
-        write_suggestions_to_txt(out5_txt,suggestion_list)
+        write_list_to_csv(out5_csv,inst_list,headers=["Chain","ResNum","ResName","Instability","Mutate to..."])
+
+
+    # 6. Merging files
+    # 7 . Generate Rosetta modelling file
+
+
+
