@@ -1,4 +1,7 @@
-
+Run
+1. Prepare pdb
+2.
+3. Generate Rosetta mut file
 
 Pymol surface exposure commands:
 Downlaod separate mmcif file (pdb didn't work)
