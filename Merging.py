@@ -57,7 +57,7 @@ for idx, path in enumerate(csv_files, start=1):
     df.rename(columns=rename_map, inplace=True)
 
     # annotate source and collect
-    df['source_file'] = os.path.basename(path)
+    df[f'source_file_f{idx}'] = os.path.basename(path)
     loaded_dfs.append(df)
 
 # 🚫 Report any files that didn’t load
@@ -75,9 +75,9 @@ if invalid_files:
 if not loaded_dfs:
     raise RuntimeError("No valid CSV files available to merge.")
 
-# 🔗 Merge all loaded DataFrames on shared columns
+# 🔗 Merge all loaded DataFrames on shared columns with safe suffixes
 merged_df = reduce(
-    lambda left, right: pd.merge(left, right, on=shared_cols, how='outer'),
+    lambda left, right: pd.merge(left, right, on=shared_cols, how='outer', suffixes=('', '_dup')),
     loaded_dfs
 )
 

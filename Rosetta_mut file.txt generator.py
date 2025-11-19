@@ -1,7 +1,6 @@
 import re
 import pandas as pd
 
-def merging
 # 20 standard proteinogenic amino acids
 AA_LIST = list("ACDEFGHIKLMNPQRSTVWY")
 

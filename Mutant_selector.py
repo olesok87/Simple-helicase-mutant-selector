@@ -36,6 +36,7 @@ def clean_and_renumber_pdb(input_pdb, output_all_chains, output_single_chain, ta
     # Save all chains
     io.set_structure(structure)
     io.save(output_all_chains, select=SelectAllChains())
+    print("Replace input_pdb with output_all_chains_path")
     print(f"✅ Saved cleaned PDB with all chains to: {output_all_chains}")
 
     # Save only the specified chain
@@ -191,17 +192,18 @@ def write_list_to_csv(filepath, data, headers):
 if __name__ == "__main__":
     # pdb_file = input("🔍 PDB file path: ").strip()
     # fix
-    input_pdb = r"C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\pdb\6YYE.pdb"
-    pdb_file = r"C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\pdb\6YYE.pdb"
+    input_pdb = r"C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\pdb\2P6R.pdb"
+    pdb_file = r"C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\pdb\2P6R.pdb"
     #results_dir = input("📂 Results folder path: ").strip()
     results_dir=r"C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\results"
     os.makedirs(results_dir, exist_ok=True)
-
-    # 0. Prep pdf file
     output_all_chains_path = r"C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\pdb\cleaned\cleaned_all.pdb"
     output_single_chain_path = r"C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\pdb\cleaned\single_chain.pdb"
-    chain_to_keep = input("Which chain would you like to analyse later in Rosetta?")  # Set to your desired chain
-    clean_and_renumber_pdb(input_pdb, output_all_chains_path, output_single_chain_path, chain_to_keep)
+
+    # 0. Prep pdf file
+    if input("✏️ Would you like to clean the pdb files and generate single chain pdb? (y/n): ").strip().lower() == 'y':
+        chain_to_keep = input("Which chain would you like to analyse later in Rosetta?")  # Set to your desired chain
+        clean_and_renumber_pdb(input_pdb, output_all_chains_path, output_single_chain_path, chain_to_keep)
 
 
     # 1. Flexible residues
@@ -215,14 +217,14 @@ if __name__ == "__main__":
     if input("✏️ Would you like to generate DNA contact residues? (y/n): ").strip().lower() == 'y':
         dna_input = input("🧬 DNA chain IDs (comma-sep): ").strip()
         dna_chains = [c.strip() for c in dna_input.split(',') if c.strip()]
-        dnac = get_dna_contact_residues(pdb_file, dna_chains)
+        dnac = get_dna_contact_residues(output_all_chains_path, dna_chains)
         out2 = os.path.join(results_dir, "dna_contact_residues.csv")
         write_list_to_csv(out2, dnac, ["chain", "resnum", "resname"])
 
     # 3. Nucleotide-proximal residues
     lig_input = input("🧪 Ligands (comma-sep, e.g., ATP,ADP,ANP) or press enter: ").strip()
     ligs = [l.strip().upper() for l in lig_input.split(',') if l.strip()]
-    prox = get_nucleotide_proximal_residues(pdb_file, ligs)
+    prox = get_nucleotide_proximal_residues(output_all_chains_path, ligs)
     out3 = os.path.join(results_dir, "nucleotide_proximal_residues.csv")
     write_list_to_csv(out3, prox, ["chain", "resnum", "resname"])
 
@@ -231,14 +233,14 @@ if __name__ == "__main__":
         cid = input("Chain ID for manual selection: ").strip()
         nums_input = input("Please use UniProt or similar for residue numbers (comma-sep): ").strip()
         nums = [int(x) for x in nums_input.split(',') if x.strip().isdigit()]
-        manual = get_manual_site_residues(pdb_file, cid, nums)
+        manual = get_manual_site_residues(output_all_chains_path, cid, nums)
         out4 = os.path.join(results_dir, "manual_site_residues.csv")
         write_list_to_csv(out4, manual, ["chain", "resnum", "resname"])
 
     # 5. Instability hotspots
     if input("✏️ Would you like to generate stability hotspots? (y/n): ").strip().lower() == 'y':
         #cif_path = input("Path to .exposed.pdf file: ").strip()
-        cif_path = r'C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\pdb\6YYE_exposed_surface.pdb'
+        cif_path = r"C:\Users\aszyk\PycharmProjects\Simple_helicase_mutant_selector\pdb\2P6R_exposed_surface.pdb"
         chain_id = input("Chain to analyze (e.g. A): ").strip()
         inst_list = get_instability_residues(cif_path, chain_id)
         out5_csv = os.path.join(results_dir, "instability_residues.csv")
