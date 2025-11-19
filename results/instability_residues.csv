@@ -1,0 +1,57 @@
+Chain,ResNum,ResName,Instability,Mutate to...
+A,1,MET,Oxidation-prone,Mutate to L or I
+A,2,LYS,Protease site,Mutate to R
+A,6,LEU,Hydrophobic patch,Mutate to T or S
+A,10,ILE,Hydrophobic patch,Mutate to T or S
+A,13,TYR,Hydrophobic patch,Mutate to S or F
+A,17,ILE,Hydrophobic patch,Mutate to T or S
+A,19,LYS,Protease site,Mutate to R
+A,23,LEU,Hydrophobic patch,Mutate to T or S
+A,24,PHE,Hydrophobic patch,Mutate to S or Y
+A,27,GLN,Deamidation hotspot,Mutate to E or A
+A,38,LYS,Protease site,Mutate to R
+A,64,LYS,Protease site,Mutate to R
+A,90,LYS,Protease site,Mutate to R
+A,102,TYR,Hydrophobic patch,Mutate to S or F
+A,134,LYS,Protease site,Mutate to R
+A,168,LYS,Protease site,Mutate to R
+A,193,TYR,Hydrophobic patch,Mutate to S or F
+A,220,PHE,Hydrophobic patch,Mutate to S or Y
+A,227,LYS,Protease site,Mutate to R
+A,258,LYS,Protease site,Mutate to R
+A,265,LYS,Protease site,Mutate to R
+A,266,TYR,Hydrophobic patch,Mutate to S or F
+A,274,LYS,Protease site,Mutate to R
+A,287,LYS,Protease site,Mutate to R
+A,294,LYS,Protease site,Mutate to R
+A,305,ASN,Deamidation hotspot,Mutate to D or A
+A,334,ASN,Deamidation hotspot,Mutate to D or A
+A,353,LYS,Protease site,Mutate to R
+A,356,LYS,Protease site,Mutate to R
+A,372,MET,Oxidation-prone,Mutate to L or I
+A,381,ILE,Hydrophobic patch,Mutate to T or S
+A,384,LYS,Protease site,Mutate to R
+A,389,ILE,Hydrophobic patch,Mutate to T or S
+A,392,LYS,Protease site,Mutate to R
+A,426,LYS,Protease site,Mutate to R
+A,442,LYS,Protease site,Mutate to R
+A,444,ASN,Deamidation hotspot,Mutate to D or A
+A,446,ILE,Hydrophobic patch,Mutate to T or S
+A,450,TYR,Hydrophobic patch,Mutate to S or F
+A,458,GLN,Deamidation hotspot,Mutate to E or A
+A,461,ASN,Deamidation hotspot,Mutate to D or A
+A,475,LYS,Protease site,Mutate to R
+A,488,LEU,Hydrophobic patch,Mutate to T or S
+A,534,PHE,Hydrophobic patch,Mutate to S or Y
+A,538,LYS,Protease site,Mutate to R
+A,543,TYR,Hydrophobic patch,Mutate to S or F
+A,547,PHE,Hydrophobic patch,Mutate to S or Y
+A,553,TRP,Hydrophobic patch,Mutate to F or Y
+A,621,LYS,Protease site,Mutate to R
+A,625,LYS,Protease site,Mutate to R
+A,644,LYS,Protease site,Mutate to R
+A,647,ASN,Deamidation hotspot,Mutate to D or A
+A,662,LYS,Protease site,Mutate to R
+A,666,LEU,Hydrophobic patch,Mutate to T or S
+A,671,ILE,Hydrophobic patch,Mutate to T or S
+A,682,LYS,Protease site,Mutate to R
