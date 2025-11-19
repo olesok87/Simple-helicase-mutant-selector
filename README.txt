@@ -1,6 +1,7 @@
 Run
 1. Prepare pdb
-2.
+2. Mutant selector
+3. Merging
 3. Generate Rosetta mut file
 
 Pymol surface exposure commands:
