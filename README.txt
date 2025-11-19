@@ -1,8 +1,9 @@
 Run
 1. Prepare pdb
-2. Mutant selector
-3. Merging
-3. Generate Rosetta mut file
+2. Select surface residues in pymol (please see below pymol commands) and dsave as pdb
+3. Mutant_selector.py
+4. Merging.py
+5. Rosetta_mut file.txt generator.py
 
 Pymol surface exposure commands:
 Downlaod separate mmcif file (pdb didn't work)
